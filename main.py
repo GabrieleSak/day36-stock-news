@@ -5,9 +5,6 @@ import requests as requests
 STOCK = "TSLA"
 COMPANY_NAME = "Tesla Inc"
 
-## STEP 1: Use https://www.alphavantage.co
-# When STOCK price increase/decreases by 5% between yesterday and the day before yesterday then print("Get News").
-
 ## STEP 2: Use https://newsapi.org
 # Instead of printing ("Get News"), actually get the first 3 news pieces for the COMPANY_NAME.
 
@@ -39,15 +36,10 @@ response.raise_for_status()
 stock_data = response.json()
 daily_data = stock_data["Time Series (Daily)"]
 data = dict(itertools.islice(daily_data.items(), 2))
-print(list(data)[0])
 price_yda = float(data[list(data)[0]]["4. close"])
-print(price_yda)
-print(list(data)[1])
 price_dby = float(data[list(data)[1]]["4. close"])
-print(price_dby)
 
 price_change = (price_yda - price_dby) / price_dby
-print(price_change)
 
 if abs(price_change) > 0.05:
     print("Get News")
