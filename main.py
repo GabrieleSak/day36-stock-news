@@ -2,11 +2,10 @@ import itertools
 from auth import *
 import requests as requests
 
-STOCK = "TSLA"
-COMPANY_NAME = "Tesla Inc"
-
-## STEP 2: Use https://newsapi.org
-# Instead of printing ("Get News"), actually get the first 3 news pieces for the COMPANY_NAME.
+# STOCK = "TSLA"
+STOCK = "COIN"
+# COMPANY_NAME = "Tesla Inc"
+COMPANY_NAME = "Coinbase"
 
 ## STEP 3: Use https://www.twilio.com
 # Send a seperate message with the percentage change and each article's title and description to your phone number.
@@ -24,14 +23,23 @@ Brief: We at Insider Monkey have gone over 821 13F filings that hedge funds and 
 """
 
 AV_Endpoint = "https://www.alphavantage.co/query"
+News_Endpoint = "https://newsapi.org/v2/everything"
 
-parameters = {
+av_parameters = {
     "function": "TIME_SERIES_DAILY_ADJUSTED",
     "symbol": STOCK,
+    "searchIn": "title, description",
     "apikey": alpha_api_key
 }
 
-response = requests.get(AV_Endpoint, params=parameters)
+news_parameters = {
+    "q": COMPANY_NAME,
+    "sortBy": "publishedAt",
+    "apiKey": news_api_key
+
+}
+
+response = requests.get(AV_Endpoint, params=av_parameters)
 response.raise_for_status()
 stock_data = response.json()
 daily_data = stock_data["Time Series (Daily)"]
@@ -42,4 +50,10 @@ price_dby = float(data[list(data)[1]]["4. close"])
 price_change = (price_yda - price_dby) / price_dby
 
 if abs(price_change) > 0.05:
-    print("Get News")
+    response = requests.get(News_Endpoint, params=news_parameters)
+    response.raise_for_status()
+    news = response.json()
+    for article in news["articles"][:3]:
+        print(article["title"])
+        print(article["description"])
+        print("------------------------------------")
