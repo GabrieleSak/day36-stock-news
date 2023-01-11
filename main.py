@@ -1,4 +1,5 @@
 import itertools
+import smtplib
 from auth import *
 import requests as requests
 
@@ -6,21 +7,6 @@ import requests as requests
 STOCK = "COIN"
 # COMPANY_NAME = "Tesla Inc"
 COMPANY_NAME = "Coinbase"
-
-## STEP 3: Use https://www.twilio.com
-# Send a seperate message with the percentage change and each article's title and description to your phone number.
-
-
-# Optional: Format the SMS message like this:
-"""
-TSLA: 🔺2%
-Headline: Were Hedge Funds Right About Piling Into Tesla Inc. (TSLA)?. 
-Brief: We at Insider Monkey have gone over 821 13F filings that hedge funds and prominent investors are required to file by the SEC The 13F filings show the funds' and investors' portfolio positions as of March 31st, near the height of the coronavirus market crash.
-or
-"TSLA: 🔻5%
-Headline: Were Hedge Funds Right About Piling Into Tesla Inc. (TSLA)?. 
-Brief: We at Insider Monkey have gone over 821 13F filings that hedge funds and prominent investors are required to file by the SEC The 13F filings show the funds' and investors' portfolio positions as of March 31st, near the height of the coronavirus market crash.
-"""
 
 AV_Endpoint = "https://www.alphavantage.co/query"
 News_Endpoint = "https://newsapi.org/v2/everything"
@@ -44,12 +30,28 @@ response.raise_for_status()
 stock_data = response.json()
 daily_data = stock_data["Time Series (Daily)"]
 data = dict(itertools.islice(daily_data.items(), 2))
-price_yda = float(data[list(data)[0]]["4. close"])
-price_dby = float(data[list(data)[1]]["4. close"])
+price_yda = float(data[list(data)[0]]["4. close"])  # yesterday
+price_dby = float(data[list(data)[1]]["4. close"])  # day before yesterday
+
+
+def send_email():
+    with smtplib.SMTP("smtp.gmail.com", port=587) as connection:
+        connection.starttls()
+        connection.login(user=my_email, password=password)
+        connection.sendmail(
+            from_addr=my_email,
+            to_addrs=email,
+            msg=f"Subject:{COMPANY_NAME} news {STOCK}: {change_symbol}{price_change_abs_pct}% \n\n {articles}".encode(
+                "utf-8")
+        )
+
 
 price_change = (price_yda - price_dby) / price_dby
+price_change_abs_pct = abs(int(round(price_change * 100)))
 
-if abs(price_change) > 0.05:
+articles = ""
+
+if price_change_abs_pct > 5:
     response = requests.get(News_Endpoint, params=news_parameters)
     response.raise_for_status()
     news = response.json()
@@ -57,3 +59,10 @@ if abs(price_change) > 0.05:
         print(article["title"])
         print(article["description"])
         print("------------------------------------")
+        article_tuple = ("Headline: ", article["title"], "\n", "Brief: ", article["description"], "\n\n")
+        articles += "".join(article_tuple)
+    if price_change > 0:
+        change_symbol = u'\U0001F53A'
+    else:
+        change_symbol = u'\U0001F53B'
+    send_email()
